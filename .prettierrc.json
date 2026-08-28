@@ -1,0 +1,17 @@
+{
+	"semi": false,
+	"singleQuote": true,
+	"trailingComma": "all",
+	"arrowParens": "always",
+	"printWidth": 100,
+	"useTabs": true,
+	"tabWidth": 4,
+	"overrides": [
+		{
+			"files": ["*.htmx"],
+			"options": {
+				"parser": "html"
+			}
+		}
+	]
+}

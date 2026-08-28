@@ -1,0 +1,9 @@
+cspell
+editorconfig
+eslint
+htmx
+jsonl
+markdownlint
+prettier
+sungun
+unicorn

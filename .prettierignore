@@ -1,0 +1,4 @@
+# prettier has no tab support for markdown — md is owned by markdownlint + editorconfig
+*.md
+# jsonl is line-oriented (one JSON value per line) — there is no indentation to format
+*.jsonl

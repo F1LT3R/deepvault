@@ -1,0 +1,7 @@
+.git/
+.pi/
+node_modules/
+prompts/
+tmp/
+.DS_Store
+*.log
