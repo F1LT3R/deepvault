@@ -21,7 +21,7 @@ vault check
 
 1. `Stack order (1+ tokens; see 'vault list'):` — comma-separated tokens, innermost first (e.g. `a256-ctr,sm4-ctr`).
 2. `Confirm stack order:` — retype the same order.
-3. `Vault passphrase:` (typed, hidden) — the Human Entry Passphrase.
+3. `Vault passphrase:` (typed, hidden) — the HEP (High Entropy Password).
 4. `Confirm passphrase:`
 5. `scrypt N (power of 2; this machine max <max>):` — the KDF cost for this vault, chosen from the machine-verified set shown in the `vault list` footer. It is typed, hidden, and **never written to the file**.
 
@@ -59,7 +59,7 @@ Prompts for a proposed stack (same format as lock; no HEP needed) and prints an 
 
 ## 🧠 HEP — what it is, and how one passphrase keys many layers
 
-The HEP (Human Entry Passphrase) is the long passphrase you type — 64+ chars, hidden, never printed. It is not a web-password: its job is to be long enough that *length alone* makes the search space astronomical.
+The HEP (High Entropy Password) is the long passphrase you type — 64+ chars, hidden, never printed. It is not a web-password: its job is to be long enough that *length alone* makes the search space astronomical.
 
 **Entropy in plain terms.** Entropy = how many candidates the attacker must consider. Every character multiplies that count by the size of the character set you could have drawn from:
 
