@@ -5,3 +5,5 @@ prompts/
 tmp/
 .DS_Store
 *.log
+backups/
+backup/
