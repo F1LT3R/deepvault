@@ -41,6 +41,51 @@ vault: opened 3 file(s) from notes.vlt into restored
 
 This example demonstrates the HEP (high entropy passphrase) as a 66-char value (floor for 5 tokens is 64); `32768` is the top of the test machine's verified scrypt N set (`vault list` footer). Test 29 runs this exact transcript.
 
+`list` takes no input — the full 47-token alphabet grouped by machine availability, with the verified scrypt N set in the footer (abridged):
+
+```shell
+$ vault list
+VAULT ALPHABET — 47 tokens; availability shown for THIS machine
+
+CORE — present in essentially every Node/OpenSSL build
+  token     mode  block  max-vault   here
+  a128-cbc  cbc   128b   unlimited   yes
+  …
+  a256-ctr  ctr   128b   unlimited   yes
+  …
+  chacha    str   —      unlimited   yes
+
+BUILD-DEPENDENT — may be absent in FIPS/minimal/distro builds
+  …
+
+NICHE — regional standard, often excluded from Western builds
+  sm4-cbc   cbc   128b   unlimited   yes
+  …
+
+DEPRECATED — OpenSSL 3.x deprecates 3DES; may not exist in future builds.
+Do not use in a new stack unless you accept re-lock risk.
+  3des-cbc  cbc   64b    4 GiB       yes
+  …
+
+KDF: scrypt r=1 p=1 — machine-verified N on THIS machine: 32768 (2^15) (N is operator-typed per vault: lock and open must be run with the same N)
+```
+
+`check` takes one prompt (a proposed stack — hidden input, no passphrase needed) and prints an advisory report:
+
+```shell
+$ vault check
+Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
+  a256-ctr: ok
+  sm4-cbc: ok
+  chacha: ok
+  a256-cbc: ok
+  a256-ctr: ok
+layer count: 5 -> HEP minimum: 64 chars
+max vault size for this stack: unlimited
+```
+
+Test 29 runs the lock/open transcript above; tests 18–19 pin the `list`/`check` rendering (test 19 runs this exact 5-token check).
+
 ### 🔒 lock
 
 1. `Stack order (1+ tokens; see 'vault list'):` — comma-separated tokens, innermost first (e.g. `a256-ctr,sm4-ctr`).

@@ -809,6 +809,12 @@ test('19. check: per-token lines, ceiling line, tip, invalid token', async () =>
 	assert.match(r.stdout, /layer count: 2 -> HEP minimum: 64 chars/)
 	assert.match(r.stdout, /max vault size for this stack: unlimited/)
 	assert.ok(!r.stdout.includes('tip:'), 'no tip for mixed stack')
+	// The README examples 5-token stack (a256-ctr twice).
+	r = await runPty(['check'], 'a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr\n')
+	assert.strictEqual(r.code, 0)
+	assert.match(r.stdout, /  a256-ctr: ok\r?\n  sm4-cbc: ok\r?\n  chacha: ok\r?\n  a256-cbc: ok\r?\n  a256-ctr: ok/)
+	assert.match(r.stdout, /layer count: 5 -> HEP minimum: 64 chars/)
+	assert.match(r.stdout, /max vault size for this stack: unlimited/)
 	r = await runPty(['check'], '3des-cbc,a256-ctr\n')
 	assert.match(r.stdout, /3des-cbc: ok \(DEPRECATED — may not exist in future builds\)/)
 	assert.match(r.stdout, /max vault size for this stack: 4 GiB \(64-bit-block tokens present\)/)
