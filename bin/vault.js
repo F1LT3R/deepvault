@@ -10,12 +10,14 @@ import {
 	renderCheck,
 } from '../lib/mode.js'
 import { lockVault, openVault, HEADER_LEN, ceilingError } from '../lib/cascade.js'
-import { scryptN } from '../lib/derive.js'
+import { machineMaxN, machineNSet } from '../lib/derive.js'
 import { readSecret } from '../lib/prompts.js'
 import { walkDir } from '../lib/fsutil.js'
 
 const STACK_PROMPT = "Stack order (1+ tokens; see 'vault list'): "
 const HEP_PROMPT = 'Vault passphrase: '
+const N_PROMPT_LOCK = (max) => `scrypt N (power of 2; this machine max ${max}): `
+const N_PROMPT_OPEN = (max) => `scrypt N (power of 2, as used at lock; this machine max ${max}): `
 
 function fail(msg) {
 	process.stderr.write(`${msg}\n`)
@@ -24,6 +26,26 @@ function fail(msg) {
 
 function requireTty() {
 	if (!process.stdin.isTTY) fail('vault: requires an interactive terminal for secret input')
+}
+
+// scrypt N is a typed secret (like HEP and stack order): never stored in the
+// file, never auto-selected. The operator picks from the machine-verified
+// set (`vault list` footer) at lock and retypes it at open. A valid-but-wrong
+// N at open falls into the same single phase-A message (no new oracle).
+async function readN(which) {
+	const max = machineMaxN()
+	const raw = (
+		await readSecret(which === 'open' ? N_PROMPT_OPEN(max) : N_PROMPT_LOCK(max))
+	).trim()
+	if (!/^\d+$/.test(raw) || raw.length === 0) {
+		fail('vault: bad scrypt N (power of 2 required, e.g. 32768)')
+	}
+	const n = Number(raw)
+	if (n > max) fail(`vault: scrypt N ${n} exceeds this machine's max (${max})`)
+	if (n < 2 || (n & (n - 1)) !== 0) {
+		fail('vault: bad scrypt N (power of 2 required, e.g. 32768)')
+	}
+	return n
 }
 
 function readRows(tokens, available, open = false) {
@@ -62,6 +84,7 @@ async function cmdLock() {
 	const hep2 = await readSecret(HEP_PROMPT)
 	if (hep1 !== hep2) fail('vault: passphrase confirmation failed')
 	checkHepFloor(hep1, rows)
+	const n = await readN('lock')
 
 	let walk
 	try {
@@ -84,7 +107,7 @@ async function cmdLock() {
 	if (ceilingMsg) fail(ceilingMsg)
 
 	try {
-		await lockVault({ vaultfile, dir, entries: walk.entries, hep: hep1, rows })
+		await lockVault({ vaultfile, dir, entries: walk.entries, hep: hep1, rows, n })
 	} catch (e) {
 		fail(e.message)
 	}
@@ -117,10 +140,11 @@ async function cmdOpen() {
 	const order = await readSecret(STACK_PROMPT)
 	const rows = readRows(parseStack(order), probeAvailability(), true)
 	checkHepFloor(hep, rows)
+	const n = await readN('open')
 
 	try {
-		const n = await openVault({ vaultfile, outdir, salt, hep, rows })
-		process.stdout.write(`vault: opened ${n} file(s) from ${vaultfile} into ${outdir}\n`)
+		const opened = await openVault({ vaultfile, outdir, salt, hep, rows, n })
+		process.stdout.write(`vault: opened ${opened} file(s) from ${vaultfile} into ${outdir}\n`)
 	} catch (e) {
 		if (e && e.phase === 'A') fail('vault: wrong passphrase/stack or tampered file')
 		if (e && e.phase === 'B') {
@@ -133,7 +157,7 @@ async function cmdOpen() {
 }
 
 function cmdList() {
-	process.stdout.write(`${renderList(probeAvailability(), scryptN())}\n`)
+	process.stdout.write(`${renderList(probeAvailability(), machineNSet())}\n`)
 }
 
 async function cmdCheck() {

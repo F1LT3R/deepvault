@@ -20,7 +20,8 @@ const {
 	probeAvailability,
 	MAX_64BIT_BYTES,
 } = await import('../lib/mode.js')
-const { splitSections, deriveMaterials, scryptN } = await import('../lib/derive.js')
+const { splitSections, deriveMaterials, machineMaxN } = await import('../lib/derive.js')
+const TEST_N = machineMaxN()
 const { r2Length, lockVault, openVault, ceilingError, HEADER_LEN } =
 	await import('../lib/cascade.js')
 const { walkDir } = await import('../lib/fsutil.js')
@@ -94,7 +95,7 @@ function makeSampleDir(dir, big = 5 * 1024 * 1024) {
 	fs.writeFileSync(path.join(dir, 'sub', 'big.bin'), bin)
 }
 
-async function openVaultFails({ vlt, out, hep, rows }) {
+async function openVaultFails({ vlt, out, hep, rows, n: TEST_N }) {
 	try {
 		const buf = fs.readFileSync(vlt)
 		await openVault({ vaultfile: vlt, outdir: out, salt: buf.subarray(8, 24), hep, rows })
@@ -190,11 +191,14 @@ test('1. round-trip at depths 3 / 10 / 16 (dynamic COUNT)', async () => {
 	for (const [depth, stack] of Object.entries(stacks)) {
 		const vlt = path.join(dir, `v${depth}.vlt`)
 		const order = stack.join(',')
-		const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+		const lock = await runPty(
+			['lock', src, vlt],
+			`${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`,
+		)
 		assert.strictEqual(lock.code, 0, `lock ${depth}: ${lock.stderr}`)
 		assert.match(lock.stdout, new RegExp(`vault: locked 3 file\\(s\\) into ${vlt}`))
 		const out = path.join(dir, `out${depth}`)
-		const open = await runPty(['open', vlt, out], `${hep}\n${order}\n`)
+		const open = await runPty(['open', vlt, out], `${hep}\n${order}\n${TEST_N}\n`)
 		assert.strictEqual(open.code, 0, `open ${depth}: ${open.stderr}`)
 		assert.match(open.stdout, new RegExp(`vault: opened 3 file\\(s\\) from ${vlt} into ${out}`))
 		compareTrees(src, out)
@@ -218,10 +222,10 @@ test('2. non-CTR modes (cbc/ofb/cfb + 3des + camellia + chacha)', async () => {
 	const hep = 'M'.repeat(64)
 	const vlt = path.join(dir, 'v.vlt')
 	const order = stack.join(',')
-	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(lock.code, 0, lock.stderr)
 	const out = path.join(dir, 'out')
-	const open = await runPty(['open', vlt, out], `${hep}\n${order}\n`)
+	const open = await runPty(['open', vlt, out], `${hep}\n${order}\n${TEST_N}\n`)
 	assert.strictEqual(open.code, 0, open.stderr)
 	compareTrees(src, out)
 })
@@ -237,7 +241,7 @@ test('3. known plaintext absent from vault bytes', async () => {
 	const hep = 'L'.repeat(64)
 	const vlt = path.join(dir, 'v.vlt')
 	const order = 'a256-ctr'
-	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(lock.code, 0, lock.stderr)
 	const buf = fs.readFileSync(vlt)
 	assert.ok(!buf.includes(needle), 'plaintext found in vault file')
@@ -252,10 +256,10 @@ test('4. wrong HEP, right order -> phase A', async () => {
 	const hep = 'W'.repeat(64)
 	const order = 'a256-ctr,sm4-cbc'
 	const vlt = path.join(dir, 'v.vlt')
-	let r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	let r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
 	const out = path.join(dir, 'out')
-	r = await runPty(['open', vlt, out], `${'X'.repeat(64)}\n${order}\n`)
+	r = await runPty(['open', vlt, out], `${'X'.repeat(64)}\n${order}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 1)
 	assert.match(r.all, /vault: wrong passphrase\/stack or tampered file/)
 	assert.ok(!fs.existsSync(out), 'outdir must not be created')
@@ -282,17 +286,17 @@ test('5. right HEP, wrong order/depth -> phase A', async () => {
 	]
 	const vlt = path.join(dir, 'v.vlt')
 	const order10 = ten.join(',')
-	let r = await runPty(['lock', src, vlt], `${order10}\n${order10}\n${hep}\n${hep}\n`)
+	let r = await runPty(['lock', src, vlt], `${order10}\n${order10}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
 	// 9-token order against a 10-token vault
 	const out9 = path.join(dir, 'out9')
-	r = await runPty(['open', vlt, out9], `${hep}\n${ten.slice(0, 9).join(',')}\n`)
+	r = await runPty(['open', vlt, out9], `${hep}\n${ten.slice(0, 9).join(',')}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 1)
 	assert.match(r.all, /vault: wrong passphrase\/stack or tampered file/)
 	assert.ok(!fs.existsSync(out9))
 	// 11-token order against a 10-token vault
 	const out11 = path.join(dir, 'out11')
-	r = await runPty(['open', vlt, out11], `${hep}\n${[...ten, 'sm4-cbc'].join(',')}\n`)
+	r = await runPty(['open', vlt, out11], `${hep}\n${[...ten, 'sm4-cbc'].join(',')}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 1)
 	assert.match(r.all, /vault: wrong passphrase\/stack or tampered file/)
 	assert.ok(!fs.existsSync(out11))
@@ -332,7 +336,7 @@ test('6. HEP floor: max(64, COUNT) chars', async () => {
 	const hep64 = 'g'.repeat(64)
 	r = await runPty(
 		['lock', src2, path.join(dir, 'v2.vlt')],
-		`${order10}\n${order10}\n${hep64}\n${hep64}\n`,
+		`${order10}\n${order10}\n${hep64}\n${hep64}\n${TEST_N}\n`,
 	)
 	assert.strictEqual(r.code, 0, r.stderr)
 	r = await runPty(
@@ -355,21 +359,24 @@ test('6. HEP floor: max(64, COUNT) chars', async () => {
 	assert.ok(!fs.existsSync(vlt100))
 	// (d) 100 chars, 100 tokens -> full round-trip
 	const hep100 = 'i'.repeat(100)
-	r = await runPty(['lock', src2, vlt100], `${order100}\n${order100}\n${hep100}\n${hep100}\n`)
+	r = await runPty(
+		['lock', src2, vlt100],
+		`${order100}\n${order100}\n${hep100}\n${hep100}\n${TEST_N}\n`,
+	)
 	assert.strictEqual(r.code, 0, r.stderr)
 	const out100 = path.join(dir, 'out100')
-	r = await runPty(['open', vlt100, out100], `${hep100}\n${order100}\n`)
+	r = await runPty(['open', vlt100, out100], `${hep100}\n${order100}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
 	compareTrees(src2, out100)
 	// (e) 64 chars, 10 tokens (boundary) -> works
 	const vltB = path.join(dir, 'vb.vlt')
 	r = await runPty(
 		['lock', src2, vltB],
-		`${order10}\n${order10}\n${'j'.repeat(64)}\n${'j'.repeat(64)}\n`,
+		`${order10}\n${order10}\n${'j'.repeat(64)}\n${'j'.repeat(64)}\n${TEST_N}\n`,
 	)
 	assert.strictEqual(r.code, 0, r.stderr)
 	const outB = path.join(dir, 'outB')
-	r = await runPty(['open', vltB, outB], `${'j'.repeat(64)}\n${order10}\n`)
+	r = await runPty(['open', vltB, outB], `${'j'.repeat(64)}\n${order10}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
 	compareTrees(src2, outB)
 })
@@ -433,8 +440,8 @@ test('8. LE32 layer index; 300-token stack round-trips', async () => {
 		Array.from({ length: 300 }, (_, i) => ['a128-ctr', 'a256-cbc', 'sm4-ofb'][i % 3]),
 		probeAvailability(),
 	)
-	const mats = deriveMaterials(hep, salt, rows)
-	const N = scryptN()
+	const N = machineMaxN()
+	const mats = deriveMaterials(hep, salt, rows, N)
 	const le32 = (n) => {
 		const b = Buffer.alloc(4)
 		b.writeUInt32LE(n, 0)
@@ -461,10 +468,14 @@ test('8. LE32 layer index; 300-token stack round-trips', async () => {
 	makeSampleDir(src, 1024 * 64)
 	const vlt = path.join(dir, 'v.vlt')
 	const order = rows.map((r) => r.token).join(',')
-	let r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`, 400000)
+	let r = await runPty(
+		['lock', src, vlt],
+		`${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`,
+		400000,
+	)
 	assert.strictEqual(r.code, 0, r.stderr)
 	const out = path.join(dir, 'out')
-	r = await runPty(['open', vlt, out], `${hep}\n${order}\n`, 400000)
+	r = await runPty(['open', vlt, out], `${hep}\n${order}\n${TEST_N}\n`, 400000)
 	assert.strictEqual(r.code, 0, r.stderr)
 	compareTrees(src, out)
 })
@@ -481,14 +492,14 @@ test('9. tamper early (first deflate byte) -> phase A', async () => {
 	const rows = validateStack(['a256-ctr', 'sm4-ctr'], probeAvailability())
 	const walk = walkDir(src)
 	const vlt = path.join(dir, 'v.vlt')
-	const stats = await lockVault({ vaultfile: vlt, entries: walk.entries, hep, rows })
+	const stats = await lockVault({ vaultfile: vlt, entries: walk.entries, hep, rows, n: TEST_N })
 	const buf = fs.readFileSync(vlt)
 	// First byte of the deflate region (the 0x78 zlib header): no valid
 	// candidate remains -> phase A, no outdir.
 	buf[HEADER_LEN + stats.r1Len] ^= 0xff
 	fs.writeFileSync(vlt, buf)
 	const out = path.join(dir, 'out')
-	const r = await openVaultFails({ vlt, out, hep, rows })
+	const r = await openVaultFails({ vlt, out, hep, rows, n: TEST_N })
 	assert.strictEqual(r.phase, 'A')
 	assert.ok(!fs.existsSync(out))
 })
@@ -511,6 +522,7 @@ test('10. tamper 10 bytes before end of deflate -> phase B', async () => {
 		entries: walk.entries,
 		hep,
 		rows,
+		n: TEST_N,
 	})
 	const vlt = path.join(dir, 'v.vlt')
 	const flip = HEADER_LEN + stats.r1Len + stats.deflatedLen - 10
@@ -526,6 +538,7 @@ test('10. tamper 10 bytes before end of deflate -> phase B', async () => {
 			salt: buf.subarray(8, 24),
 			hep,
 			rows,
+			n: TEST_N,
 		})
 	} catch (e) {
 		thrown = e
@@ -561,6 +574,7 @@ test('11. flipping a byte inside R2 is harmless', async () => {
 		entries: walk.entries,
 		hep,
 		rows,
+		n: TEST_N,
 	})
 	const vlt = path.join(dir, 'v.vlt')
 	// Stream-cipher-only stack: with a block-cipher layer one flipped byte
@@ -577,6 +591,7 @@ test('11. flipping a byte inside R2 is harmless', async () => {
 		salt: buf.subarray(8, 24),
 		hep,
 		rows,
+		n: TEST_N,
 	})
 	assert.strictEqual(n, 3)
 	compareTrees(src, path.join(dir, 'out'))
@@ -594,7 +609,7 @@ test('12. refuses to overwrite an existing vault file', async () => {
 	const mtimeBefore = fs.statSync(vlt).mtimeMs
 	const hep = 'Z'.repeat(64)
 	const order = 'a256-ctr'
-	const r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	const r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 1)
 	assert.match(r.all, new RegExp(`vault: ${vlt} already exists; refusing to overwrite`))
 	assert.deepStrictEqual(fs.readFileSync(vlt), original, 'bytes unchanged')
@@ -613,7 +628,7 @@ test('13. symlinks rejected, one line each', async () => {
 	const vlt = path.join(dir, 'v.vlt')
 	const hep = 'Y'.repeat(64)
 	const order = 'a256-ctr'
-	const r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	const r = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 1)
 	const lines = r.all
 		.split('\n')
@@ -639,10 +654,10 @@ test('14. HEP and stack order absent from file bytes and output', async () => {
 	assert.strictEqual(hep.length, 64)
 	const order = 'ar256-cfb,cm192-ctr'
 	const vlt = path.join(dir, 'v.vlt')
-	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n`)
+	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(lock.code, 0, lock.stderr)
 	const out = path.join(dir, 'out')
-	const open = await runPty(['open', vlt, out], `${hep}\n${order}\n`)
+	const open = await runPty(['open', vlt, out], `${hep}\n${order}\n${TEST_N}\n`)
 	assert.strictEqual(open.code, 0, open.stderr)
 	const file = fs.readFileSync(vlt)
 	assert.ok(!file.includes(hep), 'HEP in file')
@@ -678,9 +693,9 @@ test('16. same dir+HEP+order -> different bytes, both open', async () => {
 	const order = 'a256-ctr,sm4-cbc'
 	const v1 = path.join(dir, '1.vlt')
 	const v2 = path.join(dir, '2.vlt')
-	let r = await runPty(['lock', src, v1], `${order}\n${order}\n${hep}\n${hep}\n`)
+	let r = await runPty(['lock', src, v1], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
-	r = await runPty(['lock', src, v2], `${order}\n${order}\n${hep}\n${hep}\n`)
+	r = await runPty(['lock', src, v2], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
 	assert.strictEqual(r.code, 0, r.stderr)
 	assert.ok(
 		!fs.readFileSync(v1).equals(fs.readFileSync(v2)),
@@ -690,7 +705,7 @@ test('16. same dir+HEP+order -> different bytes, both open', async () => {
 		[v1, 'o1'],
 		[v2, 'o2'],
 	]) {
-		r = await runPty(['open', v, path.join(dir, o)], `${hep}\n${order}\n`)
+		r = await runPty(['open', v, path.join(dir, o)], `${hep}\n${order}\n${TEST_N}\n`)
 		assert.strictEqual(r.code, 0, r.stderr)
 		compareTrees(src, path.join(dir, o))
 	}
@@ -724,17 +739,17 @@ test('17. section split and material derivation', () => {
 		splitSections('a'.repeat(64), 10).map((s) => s.length),
 		[6, 6, 7, 6, 7, 6, 6, 7, 6, 7],
 	)
-	// materials deterministic for fixed (HEP, salt); different HEP -> different materials
+	// materials deterministic for fixed (HEP, salt, N); different HEP -> different materials
 	const salt = crypto.randomBytes(16)
-	const m1 = deriveMaterials('x'.repeat(64), salt, rows)
-	const m2 = deriveMaterials('x'.repeat(64), salt, rows)
+	const N = machineMaxN()
+	const m1 = deriveMaterials('x'.repeat(64), salt, rows, N)
+	const m2 = deriveMaterials('x'.repeat(64), salt, rows, N)
 	for (let i = 0; i < rows.length; i++) {
 		assert.ok(m1[i].key.equals(m2[i].key) && m1[i].iv.equals(m2[i].iv), 'deterministic')
 	}
-	const m3 = deriveMaterials('y'.repeat(64), salt, rows)
+	const m3 = deriveMaterials('y'.repeat(64), salt, rows, N)
 	assert.ok(!m1[0].key.equals(m3[0].key), 'different HEP -> different material')
 	// key = material[0:keylen), iv = material[keylen:); salt = salt || LE32(i+1)
-	const N = scryptN()
 	for (let i = 0; i < rows.length; i++) {
 		const row = rows[i]
 		const expected = crypto.scryptSync(
@@ -781,7 +796,7 @@ test('18. list prints all 47 tokens with correct availability', () => {
 		assert.ok(re.test(out), `missing/wrong line for ${row.token} (want here=${want})`)
 	}
 	assert.strictEqual(UNIVERSE.length, 47)
-	assert.match(out, /KDF: scrypt N=/)
+	assert.match(out, /KDF: scrypt r=1 p=1 — machine-verified N on THIS machine:/)
 })
 
 // --- test 19: check behavior -----------------------------------------------------------
@@ -876,7 +891,7 @@ test('24. piped stdin is refused for lock and open', async () => {
 	const hep = 'b'.repeat(64)
 	const vlt = path.join(dir, 'v.vlt')
 	const rows = validateStack(['a256-ctr'], probeAvailability())
-	await lockVault({ vaultfile: vlt, entries: walkDir(src2).entries, hep, rows })
+	await lockVault({ vaultfile: vlt, entries: walkDir(src2).entries, hep, rows, n: TEST_N })
 	const r2 = await runPlain(['open', vlt, path.join(dir, 'out')], hep + '\na256-ctr\n')
 	assert.strictEqual(r2.code, 1)
 	assert.match(r2.stderr, /vault: requires an interactive terminal for secret input/)
@@ -902,7 +917,7 @@ test('26. full alphabet: every available token in one cascade', async () => {
 	const rows = validateStack(tokens, avail)
 	const walk = walkDir(src)
 	const vlt = path.join(dir, 'full.vlt')
-	await lockVault({ vaultfile: vlt, entries: walk.entries, hep, rows })
+	await lockVault({ vaultfile: vlt, entries: walk.entries, hep, rows, n: TEST_N })
 	const out = path.join(dir, 'out')
 	const n = await openVault({
 		vaultfile: vlt,
@@ -910,9 +925,57 @@ test('26. full alphabet: every available token in one cascade', async () => {
 		salt: fs.readFileSync(vlt).subarray(8, 24),
 		hep,
 		rows,
+		n: TEST_N,
 	})
 	assert.strictEqual(n, walk.fileCount)
 	compareTrees(src, out)
+})
+
+test('27. wrong scrypt N at open -> same single phase A message', async () => {
+	const dir = fresh('wrongn')
+	const src = path.join(dir, 'src')
+	fs.mkdirSync(src)
+	fs.writeFileSync(path.join(src, 'a.txt'), 'hello\n')
+	const hep = 'W'.repeat(64)
+	const order = 'a256-ctr'
+	const vlt = path.join(dir, 'v.vlt')
+	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
+	assert.strictEqual(lock.code, 0, lock.stderr)
+	// A valid but different N (half the machine max): the KDF runs, the peel
+	// is uniform noise, and the failure is the single phase-A message.
+	const r = await runPty(
+		['open', vlt, path.join(dir, 'out')],
+		`${hep}\n${order}\n${TEST_N >> 1}\n`,
+	)
+	assert.strictEqual(r.code, 1)
+	assert.match(r.all, /vault: wrong passphrase\/stack or tampered file/)
+	assert.ok(!fs.existsSync(path.join(dir, 'out')))
+})
+
+test('28. bad and too-large scrypt N rejected before KDF', async () => {
+	const dir = fresh('baddn')
+	const src = path.join(dir, 'src')
+	fs.mkdirSync(src)
+	fs.writeFileSync(path.join(src, 'a.txt'), 'hello\n')
+	const hep = 'B'.repeat(64)
+	const order = 'a256-ctr'
+	let r = await runPty(
+		['lock', src, path.join(dir, 'v1.vlt')],
+		`${order}\n${order}\n${hep}\n${hep}\n1000\n`,
+	)
+	assert.strictEqual(r.code, 1)
+	assert.match(r.all, /vault: bad scrypt N \(power of 2 required, e\.g\. 32768\)/)
+	r = await runPty(
+		['lock', src, path.join(dir, 'v2.vlt')],
+		`${order}\n${order}\n${hep}\n${hep}\n999999999999\n`,
+	)
+	assert.strictEqual(r.code, 1)
+	assert.match(
+		r.all,
+		new RegExp(`vault: scrypt N 999999999999 exceeds this machine's max \\(${TEST_N}\\)`),
+	)
+	assert.ok(!fs.existsSync(path.join(dir, 'v1.vlt')))
+	assert.ok(!fs.existsSync(path.join(dir, 'v2.vlt')))
 })
 
 test('25. npm run check passes on the finished tree', () => {
