@@ -1,26 +1,24 @@
 {
-	"name": "[name]",
+	"name": "vault",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "[description]",
+	"description": "lock/open a directory as a single cascaded-encrypted file",
 	"license": "SEE LICENSE",
 	"files": [],
 	"engines": {
 		"node": ">=22.13.0"
 	},
 	"scripts": {
-		"lint": "eslint --no-error-on-unmatched-pattern lib/ && markdownlint-cli2 \"README.md\" \"docs/**/*.md\"",
-		"lint:fix": "eslint --no-error-on-unmatched-pattern lib/ --fix && markdownlint-cli2 --fix \"README.md\" \"docs/**/*.md\"",
-		"format": "prettier --check \".prettierrc.json\" \".markdownlint.json\" \"package.json\" \".vscode/*.json\" \"lib/**/*.{js,jsx,mjs,json,css,html,htmx}\"",
-		"format:fix": "prettier --write \".prettierrc.json\" \".markdownlint.json\" \"package.json\" \".vscode/*.json\" \"lib/**/*.{js,jsx,mjs,json,css,html,htmx}\"",
-		"check": "npm run lint && npm run format"
+		"format": "prettier --check \".prettierrc.json\" \".markdownlint.json\" \"package.json\" \".vscode/*.json\" \"lib/**/*.{js,jsx,mjs,json,css,html,htmx}\" \"bin/**/*.{js,jsx,mjs}\"",
+		"format:fix": "prettier --write \".prettierrc.json\" \".markdownlint.json\" \"package.json\" \".vscode/*.json\" \"lib/**/*.{js,jsx,mjs,json,css,html,htmx}\" \"bin/**/*.{js,jsx,mjs}\"",
+		"lint": "eslint lib/ bin/",
+		"check": "npm run lint && npm run format",
+		"test": "node --test test/"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"eslint": "^10.9.1",
-		"eslint-plugin-unicorn": "^74.0.0",
-		"markdownlint-cli2": "^0.23.2",
 		"prettier": "^3.9.6"
 	}
 }

@@ -1,9 +1,7 @@
 import js from '@eslint/js'
-import unicorn from 'eslint-plugin-unicorn'
 
 export default [
 	js.configs.recommended,
-	unicorn.configs.recommended,
 	{
 		languageOptions: {
 			ecmaVersion: 'latest',
@@ -33,23 +31,6 @@ export default [
 			'no-var': 'error',
 			'prefer-const': 'warn',
 			'no-console': 'off',
-		},
-	},
-	{
-		// Unicorn overrides.
-		// Formatting is owned by prettier — disable the unicorn rules that
-		// rewrite layout prettier also rewrites, or the two will fight.
-		// The rest are disabled because they are too opinionated for a
-		// fresh bootstrap project (enable per project if wanted).
-		rules: {
-			// Layout rules — prettier owns these
-			'unicorn/template-indent': 'off',
-			'unicorn/empty-brace-spaces': 'off',
-			// Bootstrap ergonomics
-			'unicorn/no-empty-file': 'off',
-			'unicorn/filename-case': 'off',
-			'unicorn/expiring-todo-comments': 'off',
-			'unicorn/name-replacements': 'off',
 		},
 	},
 	{
