@@ -17,7 +17,7 @@ vault list
 vault check
 ```
 
-### 📝 examples
+### 📝 Example
 
 Lock, then open, with a 5-layer stack — `a256-ctr` appears twice (repeats are legal; only the order matters). Every prompt is typed hidden (no echo): what follows the `:` below is what you type.
 
