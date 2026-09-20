@@ -884,6 +884,37 @@ test('24. piped stdin is refused for lock and open', async () => {
 
 // --- test 25: style gate ---------------------------------------------------------------------------
 
+test('26. full alphabet: every available token in one cascade', async () => {
+	const avail = probeAvailability()
+	const tokens = UNIVERSE.filter((r) => avail.has(r.cipher)).map((r) => r.token)
+	if (tokens.length < 2) return // nothing meaningful to cascade
+	const dir = fresh('fullstack')
+	const src = path.join(dir, 'src')
+	fs.mkdirSync(path.join(src, 'deep'), { recursive: true })
+	fs.mkdirSync(path.join(src, 'empty'))
+	fs.writeFileSync(path.join(src, 'a.txt'), 'hello full stack\n')
+	fs.writeFileSync(path.join(src, 'deep', 'leaf.txt'), 'leaf')
+	const comp = Buffer.alloc(200 * 1024)
+	for (let i = 0; i < comp.length; i++) comp[i] = i % 13
+	fs.writeFileSync(path.join(src, 'deep', 'compressible.bin'), comp)
+	fs.writeFileSync(path.join(src, 'deep', 'random.bin'), crypto.randomBytes(64 * 1024))
+	const hep = 'F'.repeat(Math.max(64, tokens.length))
+	const rows = validateStack(tokens, avail)
+	const walk = walkDir(src)
+	const vlt = path.join(dir, 'full.vlt')
+	await lockVault({ vaultfile: vlt, entries: walk.entries, hep, rows })
+	const out = path.join(dir, 'out')
+	const n = await openVault({
+		vaultfile: vlt,
+		outdir: out,
+		salt: fs.readFileSync(vlt).subarray(8, 24),
+		hep,
+		rows,
+	})
+	assert.strictEqual(n, walk.fileCount)
+	compareTrees(src, out)
+})
+
 test('25. npm run check passes on the finished tree', () => {
 	const r = spawnSync('npm', ['run', 'check'], { cwd: root, encoding: 'utf8' })
 	assert.strictEqual(r.status, 0, `npm run check failed:\n${r.stdout}\n${r.stderr}`)
