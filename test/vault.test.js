@@ -978,6 +978,26 @@ test('28. bad and too-large scrypt N rejected before KDF', async () => {
 	assert.ok(!fs.existsSync(path.join(dir, 'v2.vlt')))
 })
 
+// --- test 29: README usage examples — 5-layer stack, a256-ctr twice -----------
+
+test('29. usage examples 5-layer stack (a256-ctr twice) round-trips', async () => {
+	const dir = fresh('examples5')
+	const src = path.join(dir, 'src')
+	makeSampleDir(src, 1024 * 1024)
+	// The exact values the README "examples" section shows being typed.
+	const hep = 'Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m'
+	const order = 'a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr'
+	const vlt = path.join(dir, 'notes.vlt')
+	const lock = await runPty(['lock', src, vlt], `${order}\n${order}\n${hep}\n${hep}\n${TEST_N}\n`)
+	assert.strictEqual(lock.code, 0, lock.stderr)
+	assert.match(lock.stdout, new RegExp(`vault: locked 3 file\\(s\\) into ${vlt}`))
+	const out = path.join(dir, 'restored')
+	const open = await runPty(['open', vlt, out], `${hep}\n${order}\n${TEST_N}\n`)
+	assert.strictEqual(open.code, 0, open.stderr)
+	assert.match(open.stdout, new RegExp(`vault: opened 3 file\\(s\\) from ${vlt} into ${out}`))
+	compareTrees(src, out)
+})
+
 test('25. npm run check passes on the finished tree', () => {
 	const r = spawnSync('npm', ['run', 'check'], { cwd: root, encoding: 'utf8' })
 	assert.strictEqual(r.status, 0, `npm run check failed:\n${r.stdout}\n${r.stderr}`)

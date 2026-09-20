@@ -17,6 +17,30 @@ vault list
 vault check
 ```
 
+### 📝 examples
+
+Lock, then open, with a 5-layer stack — `a256-ctr` appears twice (repeats are legal; only the order matters). Every prompt is typed hidden (no echo): what follows the `:` below is what you type.
+
+```
+$ vault lock ~/notes notes.vlt
+Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
+Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
+Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
+Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
+scrypt N (power of 2; this machine max 32768): 32768
+vault: locked 3 file(s) into notes.vlt
+```
+
+```
+$ vault open notes.vlt restored
+Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
+Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
+scrypt N (power of 2, as used at lock; this machine max 32768): 32768
+vault: opened 3 file(s) from notes.vlt into restored
+```
+
+The passphrase is an example 66-char value (floor for 5 tokens is 64); `32768` is the top of this machine's verified scrypt N set (`vault list` footer). Test 29 runs this exact transcript.
+
 ### 🔒 lock
 
 1. `Stack order (1+ tokens; see 'vault list'):` — comma-separated tokens, innermost first (e.g. `a256-ctr,sm4-ctr`).
@@ -30,7 +54,7 @@ The vault file is written atomically (`<vaultfile>.tmp` then rename) and is refu
 ### 🔓 open
 
 1. `Vault passphrase:`
-2. `Stack order (innermost first):`
+2. `Stack order (1+ tokens; see 'vault list'):`
 3. `scrypt N (power of 2, as used at lock; this machine max <max>):` — the same N you typed at lock, retyped. A valid-but-different N is just a wrong guess: the same single failure message, no oracle.
 
 Two failure shapes, both reported as one line:
@@ -138,7 +162,7 @@ Bottom line: Grover is a serious argument for *which ciphers you stack* (prefer 
 
 ## 🧪 Testing & verification
 
-**Acceptance suite — `npm test` (28 tests, ~40 s).** The suite drives the real CLI through a pseudo-TTY (`test/pty-run.py`) plus lib-level tests:
+**Acceptance suite — `npm test` (29 tests, ~40 s).** The suite drives the real CLI through a pseudo-TTY (`test/pty-run.py`) plus lib-level tests:
 
 - 🔁 round-trip at stack depths 3 / 10 / 16 — byte-exact trees incl. file AND dir mtimes
 - 🔐 non-CTR modes (CBC/OFB/CFB, 3DES, Camellia, ChaCha20) round-trip
@@ -149,6 +173,7 @@ Bottom line: Grover is a serious argument for *which ciphers you stack* (prefer 
 - 📏 HEP floor `max(64, COUNT)`; ceiling math + boundary; R2 16-alignment formula
 - 🌫️ depth unobservability (3- vs 8-token stack → byte-identical M0); fresh salts → different bytes, both open
 - 🧱 300-token stack round-trip; every available alphabet token in one cascade (test 26)
+- 📝 the Usage examples 5-layer stack (`a256-ctr` twice) round-trips through the pty (test 29)
 - 🚫 overwrite refusal, symlink rejection (one line each), missing vaultfile fails before any prompt, piped stdin refused
 - 📜 `list` renders all 47 tokens with correct availability; `check` report - invalid-token path; zero runtime deps; `npm run check` gate
 
@@ -171,7 +196,7 @@ Bottom line: Grover is a serious argument for *which ciphers you stack* (prefer 
 - `lib/scan.js` — bounded deflate-offset scan (open side)
 - `lib/tar.js` — deterministic USTAR writer/reader
 - `lib/fsutil.js` — directory walk (symlink/type rejection, sorting)
-- `test/vault.test.js` — acceptance suite (28 tests), pty-driven via `test/pty-run.py`
+- `test/vault.test.js` — acceptance suite (29 tests), pty-driven via `test/pty-run.py`
 
 ## 📦 Requirements
 
