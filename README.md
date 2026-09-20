@@ -1,6 +1,4 @@
-<center><img src="docs/logo.webp" alt="" /></center>
-
-# vault
+# DeepVault
 
 > Lock a directory into a single cascaded-encrypted file; open it back.
 
@@ -19,7 +17,7 @@ ciphers, locate the deflate stream, inflate, and extract.
 vault lock <dir> <vaultfile.vlt>
 vault open <vaultfile.vlt> <outdir>
 vault list
-vault check <stack> [more tokens...]
+vault check
 ```
 
 ### lock
@@ -57,8 +55,9 @@ scrypt N actually in use on this machine (probed at startup).
 
 ### check
 
-Advisory report for a proposed stack: one line per token (DEPRECATED marked),
-the stack ceiling, and a tip. Invalid tokens fail with
+Prompts for a proposed stack (same format as lock; no HEP needed) and prints an
+advisory report: one line per token (DEPRECATED marked), the stack ceiling,
+and a tip. Invalid tokens fail with
 `vault: stack token not in alphabet: <token>`.
 
 ## Constraints & practice
