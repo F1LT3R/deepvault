@@ -119,8 +119,7 @@ function listEntries(base) {
 }
 
 // Compare trees: same entries, byte-identical files, mtime preserved for
-// files and EMPTY dirs (dirs with children get their mtime reset when their
-// children are created after the spec-mandated utimes call).
+// files and dirs (openVault re-applies dir mtimes after all child writes).
 function compareTrees(a, b, { checkMtime = true } = {}) {
 	const ea = listEntries(a)
 	const eb = listEntries(b)
@@ -140,14 +139,9 @@ function compareTrees(a, b, { checkMtime = true } = {}) {
 			}
 		} else {
 			assert.ok(fs.statSync(pb).isDirectory(), `not a dir: ${e.rel}`)
-			const hasChildren = fs.readdirSync(pa).length > 0
-			if (checkMtime && !hasChildren) {
+			if (checkMtime) {
 				const want = Math.floor(fs.statSync(pa).mtimeMs / 1000) * 1000
-				assert.strictEqual(
-					fs.statSync(pb).mtimeMs,
-					want,
-					`empty dir mtime differs: ${e.rel}`,
-				)
+				assert.strictEqual(fs.statSync(pb).mtimeMs, want, `dir mtime differs: ${e.rel}`)
 			}
 		}
 	}
