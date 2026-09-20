@@ -21,17 +21,17 @@ vault check
 
 Lock, then open, with a 5-layer stack — `a256-ctr` appears twice (repeats are legal; only the order matters). Every prompt is typed hidden (no echo): what follows the `:` below is what you type.
 
-```
+```shell
+# Locking the vault
 $ vault lock ~/notes notes.vlt
 Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
-Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
-Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
 Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
 scrypt N (power of 2; this machine max 32768): 32768
 vault: locked 3 file(s) into notes.vlt
 ```
 
-```
+```shell
+# Opening the vault
 $ vault open notes.vlt restored
 Vault passphrase: Kq7$wZ2!mP9#vR4&nX8@bL5^tY1*dF3gH6+jA0=cE9~sU2%oB7wQ4xT5yN3iH8eJ6m
 Stack order (1+ tokens; see 'vault list'): a256-ctr,sm4-cbc,chacha,a256-cbc,a256-ctr
@@ -39,7 +39,7 @@ scrypt N (power of 2, as used at lock; this machine max 32768): 32768
 vault: opened 3 file(s) from notes.vlt into restored
 ```
 
-The passphrase is an example 66-char value (floor for 5 tokens is 64); `32768` is the top of this machine's verified scrypt N set (`vault list` footer). Test 29 runs this exact transcript.
+This example demonstrates the HEP (high entropy passphrase) as a 66-char value (floor for 5 tokens is 64); `32768` is the top of the test machine's verified scrypt N set (`vault list` footer). Test 29 runs this exact transcript.
 
 ### 🔒 lock
 
