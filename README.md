@@ -2,6 +2,8 @@
 
 **Lock/open a directory as a unbounded cascade-encrypted vault file.**
 
+![DeepVault Heavy](./docs/deepvault-heavy.png)
+
 **Encryption so hard, even space aliens can use it! 🛸**
 
 > ⚠️ **WARNING:** Attempting to crack a `DeepVault` may cause the heat death of your universe. Side effects may include: total entropy, eternal darkness, and regret.
@@ -16,6 +18,7 @@ The `vault` command collapses a directory tree into one file: it compresses a de
 - ⚛️  Too few atoms in your universe to brute force the key — we counted.
 - 🌌  Remains uncrackable with a multiverse computer.
 - 🌈  Includes real protection from rainbows
+- 🏆  [Competition below!](#-competition)
 
 ## 🔐 Usage
 
@@ -224,7 +227,9 @@ Bottom line: Grover is a serious argument for *which ciphers you stack* (prefer 
 
 Go make a cup of tea. The multiverse computer will be thrashing for a bit ⏳
 
-## 🏆 Competition — $100 if you can break the wall
+## 🏆 Competition
+
+### $100 to the first person to break the wall
 
 `docs/competition.vlt` is a real DeepVault file locking a directory that contains a single file, `secrets.txt`. Recover its contents.
 
