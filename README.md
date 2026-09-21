@@ -224,6 +224,16 @@ Bottom line: Grover is a serious argument for *which ciphers you stack* (prefer 
 
 Go make a cup of tea. The multiverse computer will be thrashing for a bit ⏳
 
+## 🏆 Competition — $100 if you can break the wall
+
+`docs/competition.vlt` is a real DeepVault file locking a directory that contains a single file, `secrets.txt`. Recover its contents.
+
+- **Artifact:** `docs/competition.vlt` — 68,056 bytes, sha256 `363b995b92b8ec7aca61600f82cc019668ab205c62c7c7586475355df0d77695`
+- **Built with:** a random 64-token cascade (every 256-bit Grover-hard token repeated ≥ 3×), a 4,096-char HEP split 64 ways — 64 chars per layer — and scrypt N = 32768.
+- **What you get:** the vault file and this repository. That is everything: the HEP, the stack order, and the scrypt N are not in the file, and a wrong guess at any of them produces the single no-oracle failure message.
+- **Prize:** a $100 electronic gift card to a service of your choice.
+- **Submission:** the HEP, the 64-token stack order (innermost first), and the scrypt N that open the vault — or the recovered content of `secrets.txt`. The organizer verifies by replaying `vault open` with your submitted values and byte-comparing the result (see the Usage examples for the exact prompts).
+
 ## 🧪 QA — 29 tests, ~40 seconds, zero mercy
 
 **Acceptance suite — `npm test` (29 tests, ~40 s).** The suite drives the real CLI through a pseudo-TTY (`test/pty-run.py`) plus lib-level tests:
