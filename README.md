@@ -2,8 +2,6 @@
 
 **Lock/open a directory as a unbounded cascade-encrypted vault file.**
 
-![DeepVault Heavy](./docs/deepvault-heavy.png)
-
 **Encryption so hard, even space aliens can use it! 🛸**
 
 > ⚠️ **WARNING:** Attempting to crack a `DeepVault` may cause the heat death of your universe. Side effects may include: total entropy, eternal darkness, and regret.
